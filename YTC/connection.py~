@@ -1,5 +1,0 @@
-import pymysql
-
-db = pymysql.connect('127.0.0.1','root','#srmseONserver1','yt')
-
-dbFirst = pymysql.connect('127.0.0.1','#srmseONserver1','root')
