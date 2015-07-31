@@ -1,8 +1,8 @@
 import MySQLdb, config
 import urllib2
 from bs4 import BeautifulSoup as bs
-
-
+from multiprocessing import Pool
+import threading
 #returns page source
 def getSource(url):
 
@@ -32,7 +32,7 @@ def parsePage(soup):
                 views = ''
                 fav = ''
 
-            print (link,title,views,fav,img)
+            storeContent("archive_videos",(str(link),str(title),str(views),str(fav),str(img)))
         except Exception as x:
             print x
             pass
@@ -40,12 +40,73 @@ def parsePage(soup):
     channels = mainDiv.findAll('div',{'class':'item-ia collection-ia'})
 
     for channel in channels:
-        link = "https://archive.org"+channel.find('a').attrs['href']
-        print link
-def performOperation():
+        link = "https://archive.org"+channel.find('a').attrs['href']+"?&sort=-downloads&page="
+        storeContent("archive_collections", link)
+    if not channels and not videos:
+        return False
+    else:
+        return True
 
-    soup = bs(getSource("https://archive.org/details/movies?&sort=-downloads&page=2"))
-    parsePage(soup)
+def storeContent(table,content):
+    try:
+        db = MySQLdb.connect(config.host,config.user,config.paswd,config.db)
+        cursor= db.cursor()
+        if table == "archive_collections":
+            sql = "INSERT INTO archive_collections(`link`,`present_link`) VALUES ('%s','1')"%str(content)
+        elif table == "archive_videos":
+            sql = "INSERT INTO archive_videos(`link`,`title`,`views`,`fav`,`img`) VALUES %s"%(str(content))
+            
+        cursor.execute(sql)
+        db.commit()
+    except Exception as x:
+        print x
+
+
+def getFromDb():
+    try:
         
+        db = MySQLdb.connect(config.host,config.user,config.paswd,config.db)
+        cursor= db.cursor(MySQLdb.cursors.DictCursor)
+        sql = "SELECT * FROM archive_collections WHERE `status`!='Done' "
+        cursor.execute(sql)
+        print sql
+        data = cursor.fetchall()
+        return data
+    except Exception as x:
+        print x
+
+
+def getContent(data):
+    db = MySQLdb.connect(config.host,config.user,config.paswd,config.db)
+    cursor= db.cursor(MySQLdb.cursors.DictCursor)
+
+    i =  int(data['present_link'])
+        
+    while True:
+        
+        link = data["link"] + str(i)
+        
+        soup = bs(getSource(link))
+        if parsePage(soup):
+            i = i+1
+            cursor.execute("UPDATE archive_collections SET present_link= '%s' WHERE link = '%s' "%(i,data['link']) )
+            db.commit()
+        else:
+            
+            cursor.execute("UPDATE archive_collections SET status= 'done' WHERE link = '%s' "%(data['link']) )
+            db.commit()
+            break
+    db.close()
+
+
+
+
+def performOperation():
+    data = getFromDb()
+    for dat in data:
+        while threading.active_count()>100:
+            continue
+        threading.Thread(target= getContent,args=(dat,)).start()
+performOperation()        
         
         
