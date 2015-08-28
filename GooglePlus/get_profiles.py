@@ -11,7 +11,8 @@ cursor = db.cursor()
 def openPage(query,pageToken):
     url = "https://www.googleapis.com/plus/v1/people?query="+query.replace(" ","+")+"&maxResults=50&pageToken="+pageToken+"&key="+MAPI.api_key
     page = urllib2.urlopen(url)
-    return page.read()
+    source = page.read().decode('unicode_escape').encode('ascii','ignore')
+    return source
 
     
 
@@ -41,11 +42,12 @@ def storeContent(content):
         print sql
         print x
         
-name = raw_input("Enter Name")
-source = openPage(name,"")
-src = getContent(source)
-
-while src :
-    source = openPage(name,src)
+#name = raw_input("Enter Name")
+def getAllProfiles(name):
+    source = openPage(name,"")
     src = getContent(source)
+
+    while src :
+        source = openPage(name,src)
+        src = getContent(source)
 

@@ -1,0 +1,112 @@
+from bs4 import BeautifulSoup as bs
+import urllib2 as ul
+import re
+from threading import Thread as T
+import threading
+import connection
+import MySQLdb
+from pymongo import MongoClient as MC
+client = MC()
+db = client.Dictionary
+
+dictionary = {}
+def properFormat(syn):
+    syn = syn.strip()
+    syn = syn[2:]
+    syn = syn.split('.',1)
+    syn = list(syn)[0]
+    syn = syn.replace(' ','')
+    syn = syn.replace(';',',')
+    syn = syn.split(',')
+    return syn
+
+
+def getSource(url):
+    page = ul.urlopen(url)
+    source = page.read()
+    return source
+
+
+def getDefinition(keyword):
+    page = 'http://dictionary.reference.com/browse/%s'%keyword
+
+    #print keyword
+
+    try:
+        dictionary={}
+        dictionary[keyword]={}
+        source = getSource(page)
+        soup = bs(source)
+        sourcedata = soup.findAll('div',{'class':'source-data'})[:1]
+        soup = bs(str(sourcedata))
+        sections = soup.findAll('section',{'class':'def-pbk'})[:3]
+        try:
+            antbox = soup.findAll('div',{'class':re.compile('tail-type-antonyms')})
+            synbox = soup.findAll('div',{'class':re.compile('tail-type-synonyms')})
+
+            soup = bs(str(synbox))
+            synonyms = soup.find('div',{'class':re.compile('js-toggle-tail-blobs')})
+            dictionary[keyword]['synonyms']=properFormat(str(synonyms.text).strip())
+
+            soup = bs(str(antbox))
+            antonyms = soup.find('div',{'class':re.compile('js-toggle-tail-blobs')})
+            dictionary[keyword]['antonyms']=properFormat(str(antonyms.text).strip())
+        except:
+            pass #print "NO SYN OR ANT"
+
+        try:
+            for section in sections:
+               soup = bs(str(section))
+               wordtype = soup.find('span',{'class':'dbox-pg'})
+               dictionary[keyword][str(wordtype.text)]=[]
+               definitions = soup.findAll('div',{'class':'def-set'})[:5]
+
+               for definition in definitions:
+                   soup = bs(str(definition))
+                   meaning = soup.find('div',{'class':'def-content'})
+                   dictionary[keyword][str(wordtype.text)].append(str(meaning.text).strip().replace('.',''))
+            print dictionary
+            storeDB(dictionary)
+        except:
+            pass #print 'Word Not Found'
+
+    except :
+        pass #print "ERROR"
+
+
+def storeDB(dictionary):
+    dicti = dictionary
+    keyword= dicti.keys()[0]
+
+    store = dicti[keyword]
+    if store:
+        db.dictionary.update({'keyword':keyword},{'$set':store},True)
+
+
+def callMeanings(name):
+
+    try:
+        dbmysql = connection.con()
+
+        newCursor = dbmysql.cursor(MySQLdb.cursors.DictCursor)
+        word = name["keyword"].lower().replace('-','').replace("'",'').replace(' ','').strip()
+
+        getDefinition(word)
+        newCursor.execute("""UPDATE `newWord` SET `count`=1000 where `keyword`="%s" """%(word))
+        dbmysql.commit()
+        dictionary.clear()
+        dbmysql.close()
+    except :
+        pass
+
+dbmysql = connection.con()
+cursor = dbmysql.cursor(MySQLdb.cursors.DictCursor)
+cursor.execute('SELECT * FROM `newWord` where `count`!=1000')
+names = cursor.fetchall()
+
+for name in names:
+    while threading.active_count()>150:
+        continue
+    t = T(target=callMeanings,args = (name,))
+    t.start()
+
