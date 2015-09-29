@@ -1,0 +1,73 @@
+<html>
+	<head>
+		<title>
+			Currency Converter
+		</title>
+		<link rel="stylesheet" href="./bootstrap/css/bootstrap.min.css">
+        <script type="text/javascript" src="./js/jquery.js"></script>
+        <script type="text/javascript" src="./js/main_display.js"></script>
+        <script type="text/javascript" src="./js/temp.js"></script>
+        <style>
+        	#display_from{
+        		font-family: sans-serif-light !important;
+        		font-size: 16px !important;
+        	
+        		color: #878787;
+        	}
+        	#display_to{
+        		font-size: 26px;
+        	}
+        	div
+        	{
+        		padding-left: 0px;
+        	}
+
+        	.display_values{
+        		padding-top: 15px;
+        	}
+        	.input_fields{
+        		padding-left: 0px;
+        	}
+        </style>
+	</head>
+	<body>
+		
+		<div class="container">
+			<div class="row" id="top">
+				<div id="display_from">
+					4 US Dollor equals
+				</div>
+				<div id="display_to">
+					288 Indian Rupees
+				</div>
+			</div>
+			<div class="row display_values" id="mid">
+				<div class="col-sm-3 input_fields">
+					<input type="text" id="from" class="form-control">
+				</div>
+				<div class="col-sm-3">
+					<select id="to_select" class="form-control" >
+						<option> None </option>
+						<option> Me </option>
+					</select>
+				</div>
+
+			</div>
+
+
+			<div class="row display_values" id="bottom">
+				<div class="col-sm-3 input_fields">
+					<input type="text" id="from" class="form-control">
+				</div>
+				<div class="col-sm-3">
+					<select id="from_select" class="form-control">
+						<option> None </option>
+					</select>
+				</div>
+				
+			</div>
+
+		</div>
+
+	</body>
+</html>
